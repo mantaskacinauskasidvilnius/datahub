@@ -1,0 +1,51 @@
+# Inlined from /metadata-ingestion/examples/library/dataset_add_properties.py
+import logging
+import datetime
+from typing import Union
+
+from datahub.emitter.mce_builder import make_dataset_urn
+from datahub.emitter.rest_emitter import DataHubRestEmitter
+from datahub.specific.dataset import DatasetPatchBuilder
+
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+# Get an emitter, only REST emitter in this case
+def get_emitter() -> DataHubRestEmitter:
+    gms_endpoint = "http://108.141.32.6:8080/"
+    gms_token = "eyJhbGciOiJIUzI1NiJ9.eyJhY3RvclR5cGUiOiJVU0VSIiwiYWN0b3JJZCI6Im1hbnRhcy5rYWNpbmF1c2thc0BpZHZpbG5pdXMubHQiLCJ0eXBlIjoiUEVSU09OQUwiLCJ2ZXJzaW9uIjoiMiIsImp0aSI6IjJhM2VhMWU5LTgyMjAtNDA0OC1hZWI2LTEzZTZjODc5YWZhMSIsInN1YiI6Im1hbnRhcy5rYWNpbmF1c2thc0BpZHZpbG5pdXMubHQiLCJpc3MiOiJkYXRhaHViLW1ldGFkYXRhLXNlcnZpY2UifQ.VhdZYWttpFWbvQw2t7U-VYwIoFpoI5JT8818VN5OaAY"  # Replace with your actual token
+    return DataHubRestEmitter(gms_server=gms_endpoint, token=gms_token)
+
+# Specify the dataset URN of the existing SQL Server dataset you want to update
+# Assuming the platform identifier for SQL Server is "mssql"
+dataset_urn = make_dataset_urn(
+    platform="mssql", 
+    name="vp_prod.JUDUMAS.OP_NETWORK_BIKE_MONTH", 
+    env="PROD"
+)
+
+# Update the existing dataset by adding custom properties
+with get_emitter() as emitter:
+    for patch_mcp in (
+        DatasetPatchBuilder(dataset_urn)
+        .add_custom_property("Pavadinimas", "Vilniaus miesto ir vilniaus rajono judumo duomenys")
+        .add_custom_property("Kūrėjas", "Įmonė Altic")
+        .add_custom_property("Tema", "Operatorių duomenys")
+        .add_custom_property("Aprašymas", "Operatorių pesčiųjų metų duomenys")
+        .add_custom_property("Leidėjas", "Infrastruktūros skyrius ID Vilnius")
+        .add_custom_property("Prisidėjęs asmuo", "----")
+        # .add_custom_property("Data", "testas")
+        .add_custom_property("Tipas", "Dataset")
+        .add_custom_property("Formatas", "Reliacinė duomenų bazės lentelė")
+        .add_custom_property("Identifikatorius", "mssql")
+        .add_custom_property("Šaltinis", "MSSQL - VP_PROD")
+        .add_custom_property("Kalba", "Lietuvių")
+        .add_custom_property("Ryšys", "Dalis kliento operatorių duomenynų")
+        .add_custom_property("Aprėptis", "----")
+        .add_custom_property("Teisės", "Galioja autorių teisės InC in Copyright")
+        .add_structured_property("Data", 2022-12-22)
+        .build()
+    ):
+        emitter.emit(patch_mcp)
+
+log.info(f"Updated SQL Server dataset {dataset_urn} with new properties: cluster_name and retention_time")
